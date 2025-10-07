@@ -1,0 +1,62 @@
+/* gemini-chatbot/frontend/src/index.css */
+
+/* 🚨 NEW: Import Prompt Font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+
+/* ------------------------------------ */
+/* THEME VARIABLES (CSS Custom Properties) */
+/* ------------------------------------ */
+
+/* 📌 NOTE: 
+ * - To change the main brand color, update the --color-primary-accent value.
+ * - To adjust the theme intensity, modify the color values in :root (Light Mode) 
+ * and body.dark-mode (Dark Mode).
+ */
+
+:root {
+  /* LIGHT MODE (Slightly darker light blue tones) */
+  --color-bg-main: #E8F3FF;      /* Main Chat Area background */
+  --color-bg-sidebar: #D9E8FF;   /* Sidebar, Header, Input Container background */
+  --color-text-primary: #1c1e21; /* Primary Text Color */
+  
+  --color-bubble-user: #BBDDFF;  /* User Bubble background */
+  --color-bubble-ai: #5c6bc0;    /* AI Bubble background (using Accent) */
+  
+  --color-text-user: #1c1e21;    /* User Bubble Text Color */
+  --color-text-ai: #ffffff;      /* AI Bubble Text Color (should be bright) */
+  --color-primary-accent: #5c6bc0; /* Main Accent Color (buttons/borders) */
+}
+
+body.dark-mode {
+  /* DARK MODE (Deep blue tones) */
+  --color-bg-main: #0B132B;       /* Main Chat Area background: Deep Navy */
+  --color-bg-sidebar: #1C2E4A;    /* Sidebar, Header, Input Container background: Darker Navy */
+  --color-text-primary: #DCE9F7;  /* Primary Text Color: Light Text */
+  
+  --color-bubble-user: #2A4269;   /* User Bubble background: Dark Blue */
+  --color-bubble-ai: var(--color-primary-accent); /* AI Bubble background (using Accent) */
+  
+  --color-text-user: #DCE9F7;
+  --color-text-ai: #ffffff;
+  --color-primary-accent: #5c6bc0; 
+}
+
+/* ------------------------------------ */
+/* BASE STYLES */
+/* ------------------------------------ */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  
+  /* 🚨 MODIFIED: Apply Prompt Font */
+  font-family: 'Prompt', sans-serif;
+  
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
+}
