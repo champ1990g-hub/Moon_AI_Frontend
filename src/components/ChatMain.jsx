@@ -5,8 +5,8 @@ import { useChat } from '../Context/ChatContext.jsx';
 import ReactMarkdown from 'react-markdown'; 
 import moonAILogo from '../assets/Moon_AI_Logo.png'; 
 
-// Backend URL (Should be fetched from env file for production)
-const BACKEND_URL = 'http://localhost:3000'; 
+// FIX 2: Use Vite Environment Variable for the Backend URL
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'; 
 
 function ChatMain() {
     const { 
@@ -90,8 +90,18 @@ function ChatMain() {
             if (!response.ok) {
                 // Simplified error parsing (assuming text or json response)
                 let errorMessage = 'An unknown server error occurred.';
-                const errorText = await response.text();
-                errorMessage = errorText.replace('\n\n⚠️ ERROR: ', '').trim() || errorMessage;
+                
+                // Read the full error text from the response
+                const errorText = await response.text(); 
+                
+                try {
+                    // Try parsing as JSON first (for non-streaming errors)
+                    const errorJson = JSON.parse(errorText);
+                    errorMessage = errorJson.error || errorMessage;
+                } catch (e) {
+                    // Fallback to plain text error
+                    errorMessage = errorText.trim() || errorMessage;
+                }
                 
                 throw new Error(errorMessage);
             }
@@ -105,6 +115,21 @@ function ChatMain() {
                 if (done) break;
 
                 const chunk = decoder.decode(value, { stream: true });
+                
+                // FIX 3: Explicitly check for the [STREAM_ERROR] tag sent by the backend
+                const streamErrorMatch = chunk.match(/\[STREAM_ERROR\](.*)/);
+                if (streamErrorMatch) {
+                    const errorText = streamErrorMatch[1].trim();
+                    aiResponseText += `\n\n[SERVER STREAM ERROR] ${errorText}`; 
+                    // Update the message one last time with the error and break the loop
+                    setMessages(prev => prev.map(msg => 
+                        msg.id === aiMessageId ? { ...msg, text: aiResponseText, isError: true } : msg
+                    ));
+                    console.error("Server Stream Error:", errorText);
+                    reader.cancel(); // Close the stream
+                    break; 
+                }
+
                 aiResponseText += chunk;
                 
                 // Update AI Bubble content

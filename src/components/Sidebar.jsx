@@ -3,7 +3,8 @@
 import React from 'react';
 import { useChat } from '../Context/ChatContext.jsx'; 
 
-const BACKEND_URL = 'http://localhost:3000'; 
+// FIX 4: Use Vite Environment Variable for the Backend URL
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'; 
 
 // FIX: Receive Props isSidebarOpen and setIsSidebarOpen
 function Sidebar({ isSidebarOpen, setIsSidebarOpen }) { 
@@ -19,7 +20,7 @@ function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
                 body: JSON.stringify({ userId: userId })
             });
             
-            // Initial AI Message
+            // Initial AI Message (already in English)
             setMessages([{ 
                 id: Date.now(), 
                 text: "Hello, I am Moon AI. How can I help you today?", 

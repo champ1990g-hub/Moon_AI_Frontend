@@ -5,30 +5,31 @@ import React, { createContext, useState, useContext } from 'react';
 const ChatContext = createContext();
 
 // ----------------------------------------------------
-// 1. Helper: สร้างและจัดการ User ID (จำเป็นสำหรับ Backend Session)
+// 1. Helper: Generate and manage User ID (Required for Backend Session)
 // ----------------------------------------------------
 const generateUserId = () => {
     const storedId = localStorage.getItem('chatUserId');
     if (storedId) return storedId;
     
-    // สร้าง ID ใหม่ที่ไม่ซ้ำกัน และบันทึกไว้ใน Local Storage
+    // Generate a new unique ID and save it to Local Storage
     const newId = `guest-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     localStorage.setItem('chatUserId', newId);
     return newId;
 };
 
 // ----------------------------------------------------
-// 2. Component Provider: จัดการ State และส่งข้อมูล
+// 2. Component Provider: Manage State and deliver context
 // ----------------------------------------------------
 export const ChatProvider = ({ children }) => {
     
-    // State หลักที่ใช้ร่วมกัน
+    // Shared main State
     const [userId] = useState(generateUserId);
     const [messages, setMessages] = useState([
-        { id: 1, text: "ສະບາຍດີ ຂ້ອຍຊື່ Moon AI. ຍິນດີໃຫ້ການຊ່ວຍເຫລືອທ່ານ.", sender: "ai" }
+        // FIX 1: Initial message in English
+        { id: 1, text: "Hello, I am Moon AI. How can I help you today?", sender: "ai" } 
     ]);
     const [isLoading, setIsLoading] = useState(false);
-    const [isDark, setIsDark] = useState(false); // สำหรับ Dark Mode
+    const [isDark, setIsDark] = useState(false); // for Dark Mode
 
     const contextValue = { 
         userId, 
@@ -48,6 +49,6 @@ export const ChatProvider = ({ children }) => {
 };
 
 // ----------------------------------------------------
-// 3. Custom Hook: เพื่อให้ Component อื่นเรียกใช้งานง่าย
+// 3. Custom Hook: For easy consumption by other Components
 // ----------------------------------------------------
 export const useChat = () => useContext(ChatContext);
