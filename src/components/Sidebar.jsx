@@ -1,12 +1,9 @@
-// gemini-chatbot/frontend/src/components/Sidebar.jsx
-
 import React from 'react';
 import { useChat } from '../Context/ChatContext.jsx'; 
 
-// FIX 4: Use Vite Environment Variable for the Backend URL
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'; 
+// Use Vite Environment Variable for the Backend URL
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://moon-ai-backend.onrender.com'; 
 
-// FIX: Receive Props isSidebarOpen and setIsSidebarOpen
 function Sidebar({ isSidebarOpen, setIsSidebarOpen }) { 
     const { userId, setMessages, isDark, setIsDark } = useChat(); 
 
@@ -14,54 +11,51 @@ function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
         if (!window.confirm("Are you sure you want to start a new chat? This will clear the current history.")) return;
         
         try {
+            // FIX: Added credentials: 'include' for CORS compatibility with Backend
             await fetch(`${BACKEND_URL}/api/chat/clear`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: userId })
+                body: JSON.stringify({ userId: userId }),
+                credentials: 'include' 
             });
             
-            // Initial AI Message (already in English)
+            // Set initial AI message
             setMessages([{ 
                 id: Date.now(), 
                 text: "Hello, I am Moon AI. How can I help you today?", 
                 sender: "ai" 
             }]);
             
-            // Close Sidebar when starting new chat (for Mobile UX)
+            // Close Sidebar on mobile
             if (setIsSidebarOpen) { 
                 setIsSidebarOpen(false); 
             }
 
         } catch (error) {
-            console.error("Failed to clear chat session:", error);
-            alert("Error: Could not clear chat history on the server.");
+            console.error("Failed to clear chat history:", error);
+            alert("Failed to clear history. Check console for details.");
         }
     };
 
     return (
-        // FIX: Correct syntax - use () instead of {} in return
-        <div className={`sidebar ${isSidebarOpen ? 'sidebar-mobile-open' : ''}`}> 
-            
-            {/* FIX: Add Close Sidebar button for Mobile */}
+        <div className={`sidebar ${isSidebarOpen ? 'sidebar-mobile-open' : ''}`}>
+            {/* Close Sidebar Button (Mobile only) */}
             <button 
-                className="sidebar-close-btn"
+                className="sidebar-close-btn" 
                 onClick={() => setIsSidebarOpen(false)}
-                aria-label="Close Sidebar"
+                aria-label="Close Menu"
             >
-                ✕
+                &times;
+            </button>
+            
+            {/* New Chat Button */}
+            <button className="new-chat-btn" onClick={handleNewChat}>
+                + New Chat
             </button>
 
-            <button 
-                onClick={handleNewChat}
-                className="new-chat-btn"
-            >
-                + New chat
-            </button>
-
-            {/* Category Section (Mock) */}
             <h4 className="sidebar-heading">Category</h4>
             <select className="category-select">
-                <option>Choose category...</option>
+                <option value="">Choose category...</option>
                 {/* Add more options if needed */}
             </select>
             

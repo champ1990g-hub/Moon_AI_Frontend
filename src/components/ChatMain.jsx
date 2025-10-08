@@ -5,8 +5,8 @@ import { useChat } from '../Context/ChatContext.jsx';
 import ReactMarkdown from 'react-markdown'; 
 import moonAILogo from '../assets/Moon_AI_Logo.png'; 
 
-// FIX 2: Use Vite Environment Variable for the Backend URL
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'; 
+// FIX 1: Update the fallback URL to the deployed Render URL
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://moon-ai-backend.onrender.com'; 
 
 function ChatMain() {
     const { 
@@ -84,22 +84,20 @@ function ChatMain() {
                     userId: userId, 
                     message: textInput, 
                 }),
-                signal: controller.signal, // Pass the abort signal
+                signal: controller.signal, 
+                // FIX 2: Add credentials for CORS compatibility
+                credentials: 'include', 
             });
             
             if (!response.ok) {
-                // Simplified error parsing (assuming text or json response)
                 let errorMessage = 'An unknown server error occurred.';
                 
-                // Read the full error text from the response
                 const errorText = await response.text(); 
                 
                 try {
-                    // Try parsing as JSON first (for non-streaming errors)
                     const errorJson = JSON.parse(errorText);
                     errorMessage = errorJson.error || errorMessage;
                 } catch (e) {
-                    // Fallback to plain text error
                     errorMessage = errorText.trim() || errorMessage;
                 }
                 
@@ -116,17 +114,15 @@ function ChatMain() {
 
                 const chunk = decoder.decode(value, { stream: true });
                 
-                // FIX 3: Explicitly check for the [STREAM_ERROR] tag sent by the backend
                 const streamErrorMatch = chunk.match(/\[STREAM_ERROR\](.*)/);
                 if (streamErrorMatch) {
                     const errorText = streamErrorMatch[1].trim();
                     aiResponseText += `\n\n[SERVER STREAM ERROR] ${errorText}`; 
-                    // Update the message one last time with the error and break the loop
                     setMessages(prev => prev.map(msg => 
                         msg.id === aiMessageId ? { ...msg, text: aiResponseText, isError: true } : msg
                     ));
                     console.error("Server Stream Error:", errorText);
-                    reader.cancel(); // Close the stream
+                    reader.cancel(); 
                     break; 
                 }
 
@@ -142,14 +138,13 @@ function ChatMain() {
             if (error.name !== 'AbortError') {
                 console.error("Failed to send message:", error.message);
                 const finalErrorText = `[ERROR] ${error.message}`;
-                // Display error in the AI Bubble
                 setMessages(prev => prev.map(msg => 
                     msg.id === aiMessageId ? { ...msg, text: finalErrorText, sender: 'ai' } : msg
                 ));
             }
         } finally {
             setIsLoading(false);
-            setAbortController(null); // Cleanup
+            setAbortController(null); 
         }
     };
 
@@ -157,41 +152,41 @@ function ChatMain() {
     // 3. Render
     // ----------------------------------------------------
 
+    const renderMessage = (msg) => (
+        <div 
+            key={msg.id} 
+            className={`message-bubble ${msg.sender === 'user' ? 'bubble-user' : 'bubble-ai'}`}
+        >
+            {msg.sender === 'ai' && ( 
+                <div className="ai-avatar">
+                    <img src={moonAILogo} alt="Moon AI Avatar" /> 
+                </div>
+            )}
+            <div className="message-content">
+                {msg.sender === 'ai' ? (
+                    <ReactMarkdown>{msg.text}</ReactMarkdown>
+                ) : (
+                    msg.text
+                )}
+            </div>
+        </div>
+    );
+
     return (
         <div className="chat-main-area">
             
             {/* Message List */}
             <div className="message-list">
-                {messages.map(msg => (
-                    <div 
-                        key={msg.id} 
-                        className={`message-bubble ${msg.sender === 'user' ? 'bubble-user' : 'bubble-ai'}`}
-                    >
-                        {/* AI Avatar (AI side only) */}
-                        {msg.sender === 'ai' && ( 
-                            <div className="ai-avatar">
-                                <img src={moonAILogo} alt="Moon AI Avatar" /> 
-                            </div>
-                        )}
-                        <div className="message-content">
-                            {/* Use ReactMarkdown for AI messages */}
-                            {msg.sender === 'ai' ? (
-                                <ReactMarkdown>{msg.text}</ReactMarkdown>
-                            ) : (
-                                msg.text
-                            )}
-                        </div>
-                    </div>
-                ))}
+                {messages.map(renderMessage)}
                 
-                {/* Loading Indicator (Shown when input is not empty and loading) */}
+                {/* Loading Indicator */}
                 {isLoading && input.trim() !== '' && (
                     <div className="loading-indicator">AI is typing...</div>
                 )}
                 <div ref={messagesEndRef} /> 
             </div>
 
-            {/* Input Form: Sticky at the bottom */}
+            {/* Input Form */}
             <form onSubmit={sendMessage} className="chat-input-form">
                 <input 
                     type="text" 
@@ -201,14 +196,14 @@ function ChatMain() {
                     disabled={isLoading && !abortController} 
                 />
                 
-                {/* Single Button: Acts as Submit or Abort */}
+                {/* Single Button: Submit or Abort */}
                 <button 
-                    type={isLoading ? 'button' : 'submit'} // Use type='button' to prevent form submission while loading
-                    onClick={isLoading ? stopGeneration : undefined} // Call stopGeneration when loading
-                    disabled={!isLoading && !input.trim()} // If not loading, disable when input is empty
-                    className={isLoading ? 'stop-active' : ''} // Change class to apply Stop style
+                    type={isLoading ? 'button' : 'submit'} 
+                    onClick={isLoading ? stopGeneration : undefined} 
+                    disabled={!isLoading && !input.trim()} 
+                    className={isLoading ? 'stop-active' : ''} 
                 >
-                    {isLoading ? 'Stop' : 'Send'} {/* Change text */}
+                    {isLoading ? 'Stop' : 'Send'} 
                 </button>
             </form>
         </div>

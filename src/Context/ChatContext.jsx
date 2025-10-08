@@ -1,12 +1,8 @@
-// gemini-chatbot/frontend/src/context/ChatContext.jsx
-
 import React, { createContext, useState, useContext } from 'react';
 
 const ChatContext = createContext();
 
-// ----------------------------------------------------
-// 1. Helper: Generate and manage User ID (Required for Backend Session)
-// ----------------------------------------------------
+// Helper: Generate and manage a persistent unique User ID
 const generateUserId = () => {
     const storedId = localStorage.getItem('chatUserId');
     if (storedId) return storedId;
@@ -17,19 +13,16 @@ const generateUserId = () => {
     return newId;
 };
 
-// ----------------------------------------------------
-// 2. Component Provider: Manage State and deliver context
-// ----------------------------------------------------
+// Component Provider: Manage State and deliver context
 export const ChatProvider = ({ children }) => {
     
     // Shared main State
     const [userId] = useState(generateUserId);
     const [messages, setMessages] = useState([
-        // FIX 1: Initial message in English
         { id: 1, text: "Hello, I am Moon AI. How can I help you today?", sender: "ai" } 
     ]);
     const [isLoading, setIsLoading] = useState(false);
-    const [isDark, setIsDark] = useState(false); // for Dark Mode
+    const [isDark, setIsDark] = useState(false);
 
     const contextValue = { 
         userId, 
@@ -48,7 +41,7 @@ export const ChatProvider = ({ children }) => {
     );
 };
 
-// ----------------------------------------------------
-// 3. Custom Hook: For easy consumption by other Components
-// ----------------------------------------------------
-export const useChat = () => useContext(ChatContext);
+// Custom Hook
+export const useChat = () => {
+    return useContext(ChatContext);
+};
