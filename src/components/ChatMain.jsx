@@ -97,7 +97,7 @@ function ChatMain() {
                 try {
                     const errorJson = JSON.parse(errorText);
                     errorMessage = errorJson.error || errorMessage;
-                } catch (e) {
+                } catch {
                     errorMessage = errorText.trim() || errorMessage;
                 }
                 
