@@ -6,7 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import moonAILogo from '../assets/Moon_AI_Logo.png'; 
 
 // FIX 1: Update the fallback URL to the deployed Render URL
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://moon-ai-backend.onrender.com'; 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://ai.hongfah.la'; 
 
 function ChatMain() {
     const { 

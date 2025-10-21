@@ -2,7 +2,7 @@ import React from 'react';
 import { useChat } from '../Context/ChatContext.jsx'; 
 
 // Use Vite Environment Variable for the Backend URL
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://moon-ai-backend.onrender.com'; 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://ai.hongfah.la'; 
 
 function Sidebar({ isSidebarOpen, setIsSidebarOpen }) { 
     const { userId, setMessages, isDark, setIsDark } = useChat(); 
