@@ -2,24 +2,23 @@ import React, { createContext, useState, useContext } from 'react';
 
 const ChatContext = createContext();
 
-// Helper: Generate and manage a persistent unique User ID
-const generateUserId = () => {
-    const storedId = localStorage.getItem('chatUserId');
-    if (storedId) return storedId;
-    
-    // Generate a new unique ID and save it to Local Storage
-    const newId = `guest-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    localStorage.setItem('chatUserId', newId);
-    return newId;
-};
-
 // Component Provider: Manage State and deliver context
 export const ChatProvider = ({ children }) => {
     
-    // Shared main State
-    const [userId] = useState(generateUserId);
+    // NEW: Define the helper function INSIDE the component or use it as a local function.
+    // For lazy initialization (called once), we will define the logic inline inside useState.
+    const [userId] = useState(() => {
+        const storedId = localStorage.getItem('chatUserId');
+        if (storedId) return storedId;
+        
+        // Generate a new unique ID and save it to Local Storage
+        const newId = `guest-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        localStorage.setItem('chatUserId', newId);
+        return newId;
+    });
+
     const [messages, setMessages] = useState([
-        { id: 1, text: "Hello, I am Moon AI. How can I help you today?", sender: "ai" } 
+        { id: 1, text: "ສະບາຍດີ,ຂ້ອຍເເມ່ນ Moon AI. ຍິນດີໃຫ້ການຊ່ວຍເຫລືອທ່ານ", sender: "ai" } 
     ]);
     const [isLoading, setIsLoading] = useState(false);
     const [isDark, setIsDark] = useState(false);
@@ -42,6 +41,7 @@ export const ChatProvider = ({ children }) => {
 };
 
 // Custom Hook
+// eslint-disable-next-line react-refresh/only-export-components
 export const useChat = () => {
     return useContext(ChatContext);
 };

@@ -1,39 +1,48 @@
 // gemini-chatbot/frontend/src/components/ChatMain.jsx
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useChat } from '../Context/ChatContext.jsx'; 
-import ReactMarkdown from 'react-markdown'; 
-import moonAILogo from '../assets/Moon_AI_Logo.png'; 
+import { useChat } from '../Context/ChatContext.jsx';
+import ReactMarkdown from 'react-markdown';
+import moonAILogo from '../assets/Moon_AI_Logo.png';
 
-// FIX 1: Update the fallback URL to the deployed Render URL
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://ai.hongfah.la'; 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://ai.hongfah.la';
 
 function ChatMain() {
-    const { 
-        userId, 
-        messages, 
-        setMessages, 
-        isLoading, 
-        setIsLoading 
-    } = useChat(); 
+    const {
+        userId,
+        messages,
+        setMessages,
+        isLoading,
+        setIsLoading
+    } = useChat();
 
     const [input, setInput] = useState('');
-    const messagesEndRef = useRef(null); 
-    const [abortController, setAbortController] = useState(null); 
+    const messagesEndRef = useRef(null);
+    const [abortController, setAbortController] = useState(null);
+    const messageListRef = useRef(null);
 
     // ----------------------------------------------------
     // 1. Utility Functions
     // ----------------------------------------------------
 
-    // Auto-scroll to the latest message
+    // Optimized auto-scroll to the latest message (Already used useCallback)
+    const scrollToBottom = useCallback(() => {
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({
+                behavior: "smooth",
+                block: "end"
+            });
+        }
+    }, []);
+
     useEffect(() => {
         const timer = setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-        }, 100); 
+            scrollToBottom();
+        }, 100);
         return () => clearTimeout(timer);
-    }, [messages]);
+    }, [messages, scrollToBottom]);
 
-    // Function to abort the current streaming request
+    // Function to abort the current streaming request (Already used useCallback)
     const stopGeneration = useCallback(() => {
         if (abortController) {
             abortController.abort();
@@ -41,14 +50,21 @@ function ChatMain() {
             setIsLoading(false);
             console.log('Request aborted by user.');
         }
-    }, [abortController, setIsLoading]);
+    }, [abortController, setIsLoading]); // Dependencies are correct
 
     // ----------------------------------------------------
-    // 2. Main Send Message Logic (Handles Streaming and Abort)
+    // 2. Main Send Message Logic (Wrapped in useCallback)
     // ----------------------------------------------------
-
-    const sendMessage = async (e) => {
-        e.preventDefault();
+    
+    // **FIXED:** Wrapping sendMessage in useCallback to stabilize it as a dependency for handleKeyDown.
+    const sendMessage = useCallback(async (e) => {
+        // e.preventDefault() is moved outside the useCallback since it's the first thing in the handler
+        if (e && typeof e.preventDefault === 'function') {
+            e.preventDefault();
+        }
+        
+        // Use local state variables (input, isLoading) via their setters/latest values
+        // to avoid including them in the dependency array.
         
         // If loading, call Stop instead of sending
         if (isLoading) {
@@ -56,18 +72,18 @@ function ChatMain() {
             return;
         }
         
-        const textInput = input.trim(); 
+        const textInput = input.trim();
         if (!textInput) return;
         
         // Setup new Abort Controller
         const controller = new AbortController();
-        setAbortController(controller); 
+        setAbortController(controller);
         
         const userMessage = { id: Date.now(), text: textInput, sender: 'user' };
         
         // 1. Display user message immediately
         setMessages(prev => [...prev, userMessage]);
-        setInput('');
+        setInput(''); // Use setInput to clear the input field
         setIsLoading(true);
 
         const aiMessageId = Date.now() + 1;
@@ -85,20 +101,18 @@ function ChatMain() {
                     message: textInput, 
                 }),
                 signal: controller.signal, 
-                // FIX 2: Add credentials for CORS compatibility
                 credentials: 'include', 
             });
             
             if (!response.ok) {
                 let errorMessage = 'An unknown server error occurred.';
                 
-                const errorText = await response.text(); 
-                
                 try {
+                    const errorText = await response.text(); 
                     const errorJson = JSON.parse(errorText);
                     errorMessage = errorJson.error || errorMessage;
                 } catch {
-                    errorMessage = errorText.trim() || errorMessage;
+                    errorMessage = response.statusText || errorMessage;
                 }
                 
                 throw new Error(errorMessage);
@@ -114,22 +128,23 @@ function ChatMain() {
 
                 const chunk = decoder.decode(value, { stream: true });
                 
+                // Check for stream errors
                 const streamErrorMatch = chunk.match(/\[STREAM_ERROR\](.*)/);
                 if (streamErrorMatch) {
                     const errorText = streamErrorMatch[1].trim();
-                    aiResponseText += `\n\n[SERVER STREAM ERROR] ${errorText}`; 
-                    setMessages(prev => prev.map(msg => 
+                    aiResponseText += `\n\n[SERVER STREAM ERROR] ${errorText}`;
+                    setMessages(prev => prev.map(msg =>
                         msg.id === aiMessageId ? { ...msg, text: aiResponseText, isError: true } : msg
                     ));
                     console.error("Server Stream Error:", errorText);
-                    reader.cancel(); 
-                    break; 
+                    reader.cancel();
+                    break;
                 }
 
                 aiResponseText += chunk;
                 
                 // Update AI Bubble content
-                setMessages(prev => prev.map(msg => 
+                setMessages(prev => prev.map(msg =>
                     msg.id === aiMessageId ? { ...msg, text: aiResponseText } : msg
                 ));
             }
@@ -137,24 +152,38 @@ function ChatMain() {
         } catch (error) {
             if (error.name !== 'AbortError') {
                 console.error("Failed to send message:", error.message);
-                const finalErrorText = `[ERROR] ${error.message}`;
-                setMessages(prev => prev.map(msg => 
+                const finalErrorText = `❌ ເກີດຂໍ້ຜິດພາດ: ${error.message}`;
+                setMessages(prev => prev.map(msg =>
                     msg.id === aiMessageId ? { ...msg, text: finalErrorText, sender: 'ai' } : msg
+                ));
+            } else {
+                // If aborted, update message to show it was stopped
+                setMessages(prev => prev.map(msg =>
+                    msg.id === aiMessageId && !msg.text ?
+                    { ...msg, text: 'ການສົ່ງຂໍ້ຄວາມຖືກຍົກເລີກ' } : msg
                 ));
             }
         } finally {
             setIsLoading(false);
-            setAbortController(null); 
+            setAbortController(null);
         }
-    };
+    }, [userId, input, isLoading, stopGeneration, setMessages, setInput, setIsLoading, setAbortController]);
+
+    // Handle Enter key to send message (Dependency 'sendMessage' is now stable)
+    const handleKeyDown = useCallback((e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage(e);
+        }
+    }, [sendMessage]); // Now sendMessage is a stable dependency!
 
     // ----------------------------------------------------
     // 3. Render
     // ----------------------------------------------------
 
     const renderMessage = (msg) => (
-        <div 
-            key={msg.id} 
+        <div
+            key={msg.id}
             className={`message-bubble ${msg.sender === 'user' ? 'bubble-user' : 'bubble-ai'}`}
         >
             {msg.sender === 'ai' && ( 
@@ -162,9 +191,9 @@ function ChatMain() {
                     <img src={moonAILogo} alt="Moon AI Avatar" /> 
                 </div>
             )}
-            <div className="message-content">
+            <div className={`message-content ${msg.isError ? 'message-error' : ''}`}>
                 {msg.sender === 'ai' ? (
-                    <ReactMarkdown>{msg.text}</ReactMarkdown>
+                    <ReactMarkdown>{msg.text || '...'}</ReactMarkdown>
                 ) : (
                     msg.text
                 )}
@@ -176,34 +205,45 @@ function ChatMain() {
         <div className="chat-main-area">
             
             {/* Message List */}
-            <div className="message-list">
+            <div className="message-list" ref={messageListRef}>
                 {messages.map(renderMessage)}
                 
                 {/* Loading Indicator */}
-                {isLoading && input.trim() !== '' && (
-                    <div className="loading-indicator">AI is typing...</div>
+                {isLoading && (
+                    <div className="loading-indicator">
+                        <span>AI ກຳລັງພິມ</span>
+                        <span className="loading-dots">
+                            <span>.</span>
+                            <span>.</span>
+                            <span>.</span>
+                        </span>
+                    </div>
                 )}
                 <div ref={messagesEndRef} /> 
             </div>
 
             {/* Input Form */}
             <form onSubmit={sendMessage} className="chat-input-form">
-                <input 
-                    type="text" 
-                    value={input} 
-                    onChange={(e) => setInput(e.target.value)} 
-                    placeholder={isLoading ? "Please wait or click 'Stop'..." : "Type your message here..."}
-                    disabled={isLoading && !abortController} 
+                <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={isLoading ? "ກະລຸນາລໍຖ້າ ຫຼື ກົດ 'Stop'..." : "ພິມຂໍ້ຄວາມທີ່ນີ້..."}
+                    disabled={isLoading && !abortController}
+                    maxLength={2000}
+                    autoComplete="off"
                 />
                 
                 {/* Single Button: Submit or Abort */}
-                <button 
-                    type={isLoading ? 'button' : 'submit'} 
-                    onClick={isLoading ? stopGeneration : undefined} 
-                    disabled={!isLoading && !input.trim()} 
-                    className={isLoading ? 'stop-active' : ''} 
+                <button
+                    type={isLoading ? 'button' : 'submit'}
+                    onClick={isLoading ? stopGeneration : undefined}
+                    disabled={!isLoading && !input.trim()}
+                    className={isLoading ? 'stop-active' : ''}
+                    aria-label={isLoading ? 'Stop generation' : 'Send message'}
                 >
-                    {isLoading ? 'Stop' : 'Send'} 
+                    {isLoading ? 'Stop' : 'Send'}
                 </button>
             </form>
         </div>
